@@ -1,0 +1,626 @@
+================================================================================
+        FOOTBALL SCORE INFORMATION SYSTEM
+        BSc (Hons) Computer Science and Software Engineering
+================================================================================
+Student:   Nirhang Limbu
+Module:    CIS096-1 – Principles of Programming and Data Structures
+Date:      2024
+================================================================================
+
+TABLE OF CONTENTS
+-----------------
+1.  Introduction
+2.  Objectives
+3.  Requirements Analysis
+4.  Functional Requirements
+5.  Non-Functional Requirements
+6.  Usability Requirements
+7.  Use Case Diagram Description
+8.  Activity Diagram Description
+9.  Class Diagram Description
+10. Database Design (ERD)
+11. Physical Database Design
+12. Data Dictionary
+13. Implementation
+14. Computational Thinking Approach
+15. UI Design
+16. Testing
+17. Discussion and Reflection
+18. Conclusion
+19. References
+
+================================================================================
+1. INTRODUCTION
+================================================================================
+
+The Football Score Information System is a desktop application developed using
+JavaFX and MySQL, designed to provide an efficient platform for managing and
+viewing football-related information including teams, players, matches, and
+league standings.
+
+The system serves two types of users:
+  - Customers: Fans who want to view team statistics, match results, and
+    league standings.
+  - Admins: Staff who manage all data in the system including CRUD operations
+    on teams, players, matches, and user accounts.
+
+The application uses a client-server architecture where JavaFX provides the
+graphical user interface and MySQL serves as the persistent data store.
+
+================================================================================
+2. OBJECTIVES
+================================================================================
+
+Primary Objectives:
+  - Develop a fully functional football score management system
+  - Implement user authentication with role-based access control
+  - Enable customers to view live standings, results, and player statistics
+  - Enable administrators to perform full CRUD operations on all entities
+  - Ensure data integrity via database constraints and triggers
+  - Provide a professional, football-themed user interface
+
+Secondary Objectives:
+  - Apply Object-Oriented Programming principles throughout the codebase
+  - Use the DAO pattern for clean separation of concerns
+  - Implement secure password hashing using BCrypt
+  - Provide comprehensive input validation
+
+================================================================================
+3. REQUIREMENTS ANALYSIS
+================================================================================
+
+Technologies Used:
+  - Java 17                 - Core programming language
+  - JavaFX 17               - GUI framework for the desktop interface
+  - MySQL 8.0               - Relational database management system
+  - Maven                   - Build and dependency management tool
+  - BCrypt (jBCrypt 0.4)    - Secure password hashing library
+  - MySQL Connector/J 8.0   - JDBC driver for MySQL connectivity
+  - Eclipse / IntelliJ IDEA - Development environment
+  - Visual Paradigm          - UML diagramming tool
+
+================================================================================
+4. FUNCTIONAL REQUIREMENTS
+================================================================================
+
+FR1 - User Registration and Login
+  - Users can register with username, email, and password
+  - Passwords must be at least 8 characters long
+  - Email addresses must be in valid format
+  - Duplicate usernames and emails are rejected
+  - Passwords are hashed using BCrypt before storage
+  - Admin accounts are pre-seeded in the database
+
+FR2 - Customer Features
+  - View list of all registered teams with details
+  - View all matches with dates, scores, and status
+  - View league standings ordered by points
+  - View top scorers with goals and assists
+
+FR3 - Admin Features
+  - Manage Teams: Add new teams, edit existing teams, delete teams
+  - Manage Matches: Schedule matches, update scores and status, delete matches
+  - Manage Players: Add players with team assignment, edit stats, delete players
+  - Manage Users: View all customer accounts, block/unblock user access
+
+FR4 - Database Triggers
+  - When a match status changes to COMPLETED, team statistics are automatically
+    updated (wins, draws, losses, goals for/against, points)
+
+FR5 - Session Management
+  - After login, the last login timestamp is recorded
+  - Users can log out from any dashboard
+
+================================================================================
+5. NON-FUNCTIONAL REQUIREMENTS
+================================================================================
+
+NFR1 - Security
+  - Passwords stored using BCrypt with work factor 10
+  - Blocked users cannot log in to the system
+  - SQL queries use prepared statements to prevent SQL injection
+
+NFR2 - Performance
+  - Application should load dashboards within 2 seconds on a local machine
+  - Database queries should be optimised with appropriate indexes
+
+NFR3 - Reliability
+  - Database connection errors are caught and reported gracefully
+  - User input is validated before any database operation
+
+NFR4 - Maintainability
+  - Code follows the DAO design pattern for separation of concerns
+  - Utility classes centralise common operations (alerts, validation, passwords)
+  - FXML separates UI layout from business logic
+
+NFR5 - Portability
+  - Maven build system ensures the project can be built on any OS
+  - MySQL connection settings are centralised in DatabaseConnection.java
+
+================================================================================
+6. USABILITY REQUIREMENTS
+================================================================================
+
+UR1 - Intuitive Navigation
+  - Admin dashboard uses a sidebar for clear navigation between sections
+  - Customer dashboard uses tabs for easy switching between views
+
+UR2 - Feedback
+  - All successful operations show an information dialog
+  - All error conditions show a descriptive error dialog
+  - Confirmation dialogs prevent accidental deletions
+
+UR3 - Visual Design
+  - Consistent football-themed green colour scheme throughout the application
+  - Clear typography with readable font sizes
+  - TableViews use alternating row colours for readability
+
+================================================================================
+7. USE CASE DIAGRAM DESCRIPTION
+================================================================================
+
+Actors:
+  1. Customer - A registered user who can view football data
+  2. Admin    - A privileged user who can manage all data
+
+Customer Use Cases:
+  - UC1: Register Account
+  - UC2: Login to System
+  - UC3: View All Teams
+  - UC4: View Match Results and Schedule
+  - UC5: View League Standings
+  - UC6: View Top Scorers
+  - UC7: Logout
+
+Admin Use Cases:
+  - UC8:  Login to Admin Panel
+  - UC9:  View Dashboard Summary
+  - UC10: Add/Edit/Delete Team
+  - UC11: Schedule/Update/Delete Match
+  - UC12: Add/Edit/Delete Player
+  - UC13: Block/Unblock User
+  - UC14: Logout
+
+Relationships:
+  - Login (UC2, UC8) is a precondition for all other use cases
+  - UC1 (Register) extends UC2 (Login) for new customers
+  - UC10-13 are all <<include>> the admin dashboard (UC9)
+
+================================================================================
+8. ACTIVITY DIAGRAM DESCRIPTION
+================================================================================
+
+Login Activity:
+  1. User enters username and password
+  2. System validates fields are not empty
+  3. System queries database for user by username
+  4. If user not found → show error "Invalid credentials"
+  5. If user found → verify BCrypt password hash
+  6. If password incorrect → show error "Invalid credentials"
+  7. If user status is BLOCKED → show error "Account blocked"
+  8. If all checks pass → update last_login timestamp
+  9. Redirect to Customer Dashboard or Admin Dashboard based on user_type
+
+Match Score Update Activity (Admin):
+  1. Admin selects a match from the matches table
+  2. Admin clicks "Update Score"
+  3. Dialog appears with current scores and status
+  4. Admin enters new scores and selects status (e.g., COMPLETED)
+  5. System calls updateScore() in MatchDAO
+  6. MySQL trigger fires: updates team wins/draws/losses/goals/points
+  7. Success message displayed; table refreshes
+
+================================================================================
+9. CLASS DIAGRAM DESCRIPTION
+================================================================================
+
+Package: com.football.models
+  - User: userId, username, email, passwordHash, userType(enum), status(enum),
+          createdAt, lastLogin
+  - Team: teamId, teamName, foundedYear, stadium, coach, city, logoUrl,
+          wins, draws, losses, goalsFor, goalsAgainst, points, createdAt,
+          updatedAt + getMatchesPlayed(), getGoalDifference()
+  - Player: playerId, teamId, playerName, position(enum), jerseyNumber,
+            dateOfBirth, nationality, height, weight, matchesPlayed, goals,
+            assists, yellowCards, redCards, createdAt, teamName
+  - Match: matchId, homeTeamId, awayTeamId, matchDate, matchTime, homeScore,
+           awayScore, status(enum), createdAt, updatedAt, homeTeamName,
+           awayTeamName + getResult(), getScoreDisplay()
+
+Package: com.football.dao
+  - DatabaseConnection: Singleton, holds MySQL Connection
+  - UserDAO: findByUsername, findByEmail, authenticate, register,
+             updateLastLogin, getAllCustomers, updateUserStatus, getUserCount
+  - TeamDAO: getAllTeams, getTeamById, addTeam, updateTeam, deleteTeam,
+             getTeamCount, getStandings
+  - PlayerDAO: getAllPlayers, getPlayersByTeam, addPlayer, updatePlayer,
+               deletePlayer, getPlayerCount, getTopScorers
+  - MatchDAO: getAllMatches, getMatchesByStatus, addMatch, updateMatch,
+              updateScore, deleteMatch, getMatchCount, getUpcomingMatches,
+              getRecentResults
+
+Package: com.football.controllers
+  - LoginController, RegisterController
+  - CustomerDashboardController, AdminDashboardController
+  - TeamsController, MatchesController, PlayersController
+  - StatisticsController, ManageUsersController
+
+Package: com.football.utils
+  - PasswordUtil: hashPassword(), checkPassword()
+  - ValidationUtil: isValidEmail(), isStrongPassword(), isEmpty(), areFieldsEmpty()
+  - AlertUtil: showInfo(), showError(), showWarning(), showConfirmation()
+
+================================================================================
+10. DATABASE DESIGN (ERD)
+================================================================================
+
+The system uses four main tables with the following relationships:
+
+  users (1) ───────────────────────── (user registers/logs in)
+
+  teams (1) ──────────────── (M) players    [one team has many players]
+  teams (1) ──────────────── (M) matches    [as home_team_id]
+  teams (1) ──────────────── (M) matches    [as away_team_id]
+
+ERD Entities:
+  [users] ──── user_id (PK), username (UQ), email (UQ), password_hash,
+               user_type, status, created_at, last_login
+
+  [teams] ──── team_id (PK), team_name (UQ), founded_year, stadium, coach,
+               city, logo_url, wins, draws, losses, goals_for, goals_against,
+               points, created_at, updated_at
+
+  [players] ── player_id (PK), team_id (FK→teams), player_name, position,
+               jersey_number, date_of_birth, nationality, height, weight,
+               matches_played, goals, assists, yellow_cards, red_cards, created_at
+
+  [matches] ── match_id (PK), home_team_id (FK→teams), away_team_id (FK→teams),
+               match_date, match_time, home_score, away_score, status,
+               created_at, updated_at
+
+================================================================================
+11. PHYSICAL DATABASE DESIGN
+================================================================================
+
+Table: users
+  Column         Type                    Constraints
+  user_id        INT AUTO_INCREMENT      PRIMARY KEY
+  username       VARCHAR(50)             UNIQUE NOT NULL
+  email          VARCHAR(100)            UNIQUE NOT NULL
+  password_hash  VARCHAR(255)            NOT NULL
+  user_type      ENUM('CUSTOMER','ADMIN')DEFAULT 'CUSTOMER'
+  status         ENUM('ACTIVE','BLOCKED') DEFAULT 'ACTIVE'
+  created_at     TIMESTAMP               DEFAULT CURRENT_TIMESTAMP
+  last_login     TIMESTAMP               NULL
+
+Table: teams
+  Column         Type          Constraints
+  team_id        INT           PRIMARY KEY AUTO_INCREMENT
+  team_name      VARCHAR(100)  UNIQUE NOT NULL
+  founded_year   INT
+  stadium        VARCHAR(100)
+  coach          VARCHAR(100)
+  city           VARCHAR(100)
+  logo_url       VARCHAR(255)
+  wins           INT           DEFAULT 0
+  draws          INT           DEFAULT 0
+  losses         INT           DEFAULT 0
+  goals_for      INT           DEFAULT 0
+  goals_against  INT           DEFAULT 0
+  points         INT           DEFAULT 0
+  created_at     TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+  updated_at     TIMESTAMP     ON UPDATE CURRENT_TIMESTAMP
+
+Table: players
+  Column         Type                                        Constraints
+  player_id      INT                                         PRIMARY KEY AUTO_INCREMENT
+  team_id        INT                                         FK → teams(team_id)
+  player_name    VARCHAR(100)                                NOT NULL
+  position       ENUM('Goalkeeper','Defender','Midfielder','Forward') NOT NULL
+  jersey_number  INT
+  date_of_birth  DATE
+  nationality    VARCHAR(50)
+  height         DECIMAL(4,1)
+  weight         DECIMAL(5,1)
+  matches_played INT                                         DEFAULT 0
+  goals          INT                                         DEFAULT 0
+  assists        INT                                         DEFAULT 0
+  yellow_cards   INT                                         DEFAULT 0
+  red_cards      INT                                         DEFAULT 0
+  created_at     TIMESTAMP                                   DEFAULT CURRENT_TIMESTAMP
+
+Table: matches
+  Column         Type                                               Constraints
+  match_id       INT                                                PRIMARY KEY AUTO_INCREMENT
+  home_team_id   INT                                                FK → teams(team_id)
+  away_team_id   INT                                                FK → teams(team_id)
+  match_date     DATE                                               NOT NULL
+  match_time     TIME
+  home_score     INT                                                DEFAULT 0
+  away_score     INT                                                DEFAULT 0
+  status         ENUM('SCHEDULED','IN_PROGRESS','COMPLETED','POSTPONED','CANCELLED') DEFAULT 'SCHEDULED'
+  created_at     TIMESTAMP                                          DEFAULT CURRENT_TIMESTAMP
+  updated_at     TIMESTAMP                                          ON UPDATE CURRENT_TIMESTAMP
+
+================================================================================
+12. DATA DICTIONARY
+================================================================================
+
+users table:
+  user_id       - Unique identifier for each user (auto-generated)
+  username      - Unique login name chosen by the user
+  email         - User's email address (must be unique and valid format)
+  password_hash - BCrypt-hashed version of the user's password
+  user_type     - Either CUSTOMER (regular user) or ADMIN (administrator)
+  status        - ACTIVE (can login) or BLOCKED (cannot login)
+  created_at    - Timestamp when the account was created
+  last_login    - Timestamp of the most recent successful login
+
+teams table:
+  team_id       - Unique identifier for each team
+  team_name     - Official name of the football team
+  founded_year  - Year the team was founded
+  stadium       - Name of the team's home stadium
+  coach         - Name of the head coach/manager
+  city          - City where the team is based
+  logo_url      - URL or path to the team's logo image
+  wins          - Total number of wins in the current season
+  draws         - Total number of draws in the current season
+  losses        - Total number of losses in the current season
+  goals_for     - Total goals scored by the team
+  goals_against - Total goals conceded by the team
+  points        - Total league points (3 per win, 1 per draw)
+  created_at    - Record creation timestamp
+  updated_at    - Record last update timestamp
+
+players table:
+  player_id     - Unique identifier for each player
+  team_id       - Foreign key linking player to their team
+  player_name   - Full name of the player
+  position      - Playing position (Goalkeeper/Defender/Midfielder/Forward)
+  jersey_number - Squad number worn on the player's shirt
+  date_of_birth - Player's date of birth
+  nationality   - Player's country of origin
+  height        - Player's height in centimetres
+  weight        - Player's weight in kilograms
+  matches_played- Number of matches the player has played
+  goals         - Total goals scored by the player
+  assists       - Total assists provided by the player
+  yellow_cards  - Number of yellow cards received
+  red_cards     - Number of red cards received
+  created_at    - Record creation timestamp
+
+matches table:
+  match_id      - Unique identifier for each match
+  home_team_id  - Foreign key for the home team
+  away_team_id  - Foreign key for the away team
+  match_date    - Date when the match is/was played
+  match_time    - Kick-off time for the match
+  home_score    - Goals scored by the home team
+  away_score    - Goals scored by the away team
+  status        - Current state of the match (SCHEDULED/IN_PROGRESS/
+                  COMPLETED/POSTPONED/CANCELLED)
+  created_at    - Record creation timestamp
+  updated_at    - Record last update timestamp
+
+================================================================================
+13. IMPLEMENTATION
+================================================================================
+
+Object-Oriented Programming Concepts Applied:
+
+1. Encapsulation
+   - All model classes (User, Team, Player, Match) have private fields with
+     public getters and setters, protecting internal data.
+
+2. Inheritance
+   - Controllers use JavaFX base classes (inheriting FXML functionality).
+
+3. Polymorphism
+   - Enum types (User.UserType, Player.Position, Match.Status) provide
+     type-safe polymorphic values used throughout the system.
+
+4. Abstraction
+   - DAO classes abstract all database operations from the controllers.
+   - Utility classes abstract common operations (hashing, validation, alerts).
+
+Design Patterns Used:
+
+1. Singleton Pattern (DatabaseConnection)
+   - Ensures only one database connection instance exists at runtime.
+
+2. Data Access Object (DAO) Pattern
+   - Separates database logic from business logic and UI.
+   - Each entity (User, Team, Player, Match) has its own DAO class.
+
+3. MVC Pattern (Model-View-Controller)
+   - Models: com.football.models package
+   - Views: FXML files in src/main/resources/fxml/
+   - Controllers: com.football.controllers package
+
+Key Implementation Details:
+  - BCrypt password hashing with work factor 10 for secure credential storage
+  - PreparedStatement usage to prevent SQL injection attacks
+  - JavaFX PropertyValueFactory for binding model fields to TableView columns
+  - JavaFX Dialog API for in-application CRUD forms
+  - FXML for clean separation of UI layout from Java code
+
+================================================================================
+14. COMPUTATIONAL THINKING APPROACH
+================================================================================
+
+Decomposition:
+  The problem was broken into smaller sub-problems:
+  - User authentication system
+  - Team management module
+  - Match management module
+  - Player management module
+  - Statistics/standings calculation
+
+Pattern Recognition:
+  - All CRUD operations follow the same pattern: load → display → action → refresh
+  - All DAO classes follow the same structure: connection, CRUD methods, mapper
+  - All dialogs follow the same pattern: Dialog → GridPane → ResultConverter
+
+Abstraction:
+  - DatabaseConnection hides connection complexity
+  - PasswordUtil hides BCrypt complexity
+  - AlertUtil hides JavaFX Alert complexity
+  - ValidationUtil hides regex and validation logic
+
+Algorithmic Thinking:
+  - Login authentication: query → verify hash → check status → redirect
+  - League standings: ORDER BY points DESC, goal_difference DESC
+  - Team stats update: triggered automatically on match completion
+
+================================================================================
+15. UI DESIGN
+================================================================================
+
+Design Philosophy:
+  - Football-themed green colour palette inspired by football pitch colours
+  - Clean, professional layout suitable for a sports information system
+  - Consistent styling across all screens using a shared CSS stylesheet
+
+Screens:
+  1. Login Screen
+     - Centered card layout on a green gradient background
+     - Football emoji as a visual logo
+     - Username/password fields with login button
+     - Link to registration page
+
+  2. Registration Screen
+     - Same layout as login for consistency
+     - Four fields: username, email, password, confirm password
+     - Back-to-login link
+
+  3. Customer Dashboard
+     - Tab-based navigation (Dashboard, Teams, Matches, Statistics)
+     - Green navigation bar with logout button
+     - TableViews with styled column headers
+
+  4. Admin Dashboard
+     - BorderPane layout with sidebar navigation
+     - Summary cards showing counts of teams, matches, players, users
+     - Sidebar buttons navigate to management views
+     - CRUD operations via dialog forms
+
+Colour Scheme:
+  Primary:   #1B5E20 (dark green)
+  Secondary: #2E7D32 (medium green)
+  Accent:    #4CAF50 (light green)
+  Danger:    #C62828 (red - for delete/block operations)
+  Info:      #1565C0 (blue - for edit/secondary operations)
+
+================================================================================
+16. TESTING
+================================================================================
+
+Test Cases:
+
+ID   | Test Case                    | Input                      | Expected Result           | Pass/Fail
+-----|------------------------------|----------------------------|---------------------------|----------
+TC01 | Valid login - customer       | john_doe / admin123        | Redirect to customer dash | Pass
+TC02 | Valid login - admin          | admin / admin123           | Redirect to admin dash    | Pass
+TC03 | Invalid password             | john_doe / wrongpass       | Error: Invalid credentials| Pass
+TC04 | Non-existent username        | nouser / admin123          | Error: Invalid credentials| Pass
+TC05 | Blocked user login           | blocked_user / pass        | Error: Account blocked    | Pass
+TC06 | Empty login fields           | (empty) / (empty)          | Error: Fields required    | Pass
+TC07 | Register - valid data        | newuser/email/pass8chars   | Success message + redirect| Pass
+TC08 | Register - invalid email     | user / invalid-email / pass| Error: Invalid email      | Pass
+TC09 | Register - short password    | user / email / pass        | Error: Min 8 chars        | Pass
+TC10 | Register - duplicate user    | john_doe / email / pass    | Error: Username exists    | Pass
+TC11 | Register - duplicate email   | newuser / john@email / pass| Error: Email registered   | Pass
+TC12 | Register - passwords differ  | user / email / pass / diff | Error: Passwords differ   | Pass
+TC13 | Add team - valid data        | Team name / Stadium etc.   | Team added; table updated | Pass
+TC14 | Add team - empty name        | (empty) fields             | Error dialog shown        | Pass
+TC15 | Edit team                    | Select team, change coach  | Team updated; table refresh| Pass
+TC16 | Delete team - confirmed      | Select team, confirm       | Team deleted              | Pass
+TC17 | Delete team - cancelled      | Select team, cancel        | No action taken           | Pass
+TC18 | Schedule match               | Two teams, date selected   | Match added as SCHEDULED  | Pass
+TC19 | Update score - completed     | Set score, status=COMPLETED| Score saved; trigger fires| Pass
+TC20 | Add player - valid data      | Name, team, position       | Player added to table     | Pass
+TC21 | Block user                   | Select customer, confirm   | Status set to BLOCKED     | Pass
+TC22 | Unblock user                 | Select blocked user        | Status set to ACTIVE      | Pass
+TC23 | League standings ordered     | View Statistics tab        | Teams ordered by points   | Pass
+TC24 | Top scorers ordered          | View Statistics tab        | Players ordered by goals  | Pass
+
+================================================================================
+17. DISCUSSION AND REFLECTION
+================================================================================
+
+The Football Score Information System successfully meets all the specified
+requirements. The application demonstrates a solid understanding of:
+
+1. Object-Oriented Programming: Clean separation of models, DAOs, controllers,
+   and utilities makes the codebase maintainable and extensible.
+
+2. Database Design: The relational schema with foreign keys ensures referential
+   integrity. The use of triggers for automatic stat calculation demonstrates
+   advanced database knowledge.
+
+3. Security: BCrypt password hashing ensures that even if the database were
+   compromised, user passwords would not be directly exposed. Prepared statements
+   prevent SQL injection.
+
+Challenges Encountered:
+  - Coordinating the JavaFX MVC pattern with FXML required understanding the
+    lifecycle of FXML controllers and the initialize() method.
+  - The Database trigger for auto-updating team stats required careful logic
+    to handle wins, losses, and draws correctly.
+
+Future Improvements:
+  - Add search/filter functionality to tables
+  - Implement a match commentary/events log
+  - Add player photo upload functionality
+  - Create match statistics breakdown (shots, possession, etc.)
+  - Add export functionality for reports (PDF/Excel)
+  - Implement real-time score updates using background threads
+
+================================================================================
+18. CONCLUSION
+================================================================================
+
+The Football Score Information System is a fully functional JavaFX desktop
+application that successfully delivers both customer-facing viewing capabilities
+and administrator management tools for football data.
+
+The project demonstrates practical application of:
+  - Java 17 and JavaFX 17 for modern desktop development
+  - MySQL with JDBC for persistent data storage
+  - Maven for professional build management
+  - Design patterns (Singleton, DAO, MVC) for clean architecture
+  - Security best practices (BCrypt, prepared statements)
+
+The application is ready for import into Eclipse as a Maven project by using
+File > Import > Maven > Existing Maven Projects and selecting the root folder.
+
+================================================================================
+19. REFERENCES
+================================================================================
+
+1. Oracle. (2023). JavaFX Documentation.
+   https://openjfx.io/javadoc/17/
+
+2. Oracle. (2023). Java SE 17 Documentation.
+   https://docs.oracle.com/en/java/javase/17/
+
+3. MySQL. (2023). MySQL 8.0 Reference Manual.
+   https://dev.mysql.com/doc/refman/8.0/en/
+
+4. jBCrypt. (2011). A Java implementation of OpenBSD's Blowfish password hashing.
+   http://www.mindrot.org/projects/jBCrypt/
+
+5. Apache Maven. (2023). Maven Documentation.
+   https://maven.apache.org/guides/
+
+6. Gamma, E., Helm, R., Johnson, R., & Vlissides, J. (1994).
+   Design Patterns: Elements of Reusable Object-Oriented Software.
+   Addison-Wesley.
+
+7. OpenFX Maven Plugin. (2023). JavaFX Maven Plugin Documentation.
+   https://github.com/openjfx/javafx-maven-plugin
+
+================================================================================
+END OF REPORT
+================================================================================
