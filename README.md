@@ -45,14 +45,11 @@ football-score-system/
 │   │   │   ├── controllers/
 │   │   │   └── utils/
 │   │   └── resources/
-│   │       ├── fxml/
 │   │       ├── css/
-│   │       └── images/
 ├── database/
 │   ├── schema.sql
 │   ├── triggers.sql
 │   └── sample_data.sql
-└── pom.xml
 ```
 
 ## 🚀 Setup Instructions
